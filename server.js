@@ -3,42 +3,42 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
-const Order = require('./models/Order');
-
 const app = express();
 
 // ================= MIDDLEWARE =================
-app.use(cors());
+// Configure CORS to allow your Netlify frontend and local development
+app.use(cors({
+  origin: ["https://amaiaorders.netlify.app", "http://localhost:3000"],
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+}));
+
 app.use(express.json());
 
-// ================= CUSTOMER ROUTES =================
+// ================= MONGODB CONNECTION =================
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 5000,
+      family: 4
+    });
+    console.log('Connected to MongoDB Successfully! 🎉');
+  } catch (err) {
+    console.error('MongoDB connection error:', err.message);
+    // We don't necessarily exit here to allow Railway to keep retrying if it's a transient issue
+  }
+};
+
+connectDB();
+
+// ================= ROUTES =================
 app.use('/api/customers', require('./routes/customerRoutes'));
-
-// ================= FOOD ROUTES =================
 app.use('/api/dayfoods', require('./routes/foodRoutes'));
-
-// ================= DYNAMIC BUSINESS LEDGER ROUTES =================
 app.use('/api/day-foods', require('./routes/dayFoodRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/expenses', require('./routes/expenseRoutes'));
 
-
-
-// ================= MONGODB CONNECTION =================
-mongoose.connect(process.env.MONGO_URI, {
-  serverSelectionTimeoutMS: 5000,
-  family: 4
-})
-.then(() => console.log('Connected to MongoDB Successfully! 🎉'))
-.catch(err => {
-  console.error('MongoDB connection error details:', err.message);
-});
-
-
-
-/* =========================================================
-   HEALTH CHECK & START
-   ========================================================= */
+// ================= HEALTH CHECK & START =================
 app.get('/', (req, res) => res.json({ message: 'POS Backend API running 🚀' }));
 
 const PORT = process.env.PORT || 5000;
